@@ -136,6 +136,15 @@ function loadImage(src) {
   });
 }
 
+// the pictures are fetched as soon as the page opens, before any GPU work, so
+// a room is almost always ready by the time anyone walks up to its door
+const fetched = {};
+export function prefetchRoom(room) {
+  const f = INTERIORS[room].file;
+  fetched[room] ??= Promise.all([`${f}.webp`, `${f}-masks.webp`, `${f}-aux.webp`, `${f}-cloth.webp`].map((n) => loadImage(`assets/rooms/${n}`)));
+  return fetched[room];
+}
+
 function compile(gl, type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
@@ -200,9 +209,7 @@ export class Interior {
   // fetch a room's pictures ahead of time (into the browser's cache only);
   // they go onto the GPU when we walk towards that room
   preload(room) {
-    const f = INTERIORS[room].file;
-    this.images[room] ??= Promise.all([`${f}.webp`, `${f}-masks.png`, `${f}-aux.png`, `${f}-cloth.png`].map((n) => loadImage(`assets/rooms/${n}`)));
-    return this.images[room];
+    return prefetchRoom(room);
   }
 
   // only the room we are in lives on the GPU, which keeps phones comfortable

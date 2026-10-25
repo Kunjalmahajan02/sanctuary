@@ -263,8 +263,8 @@ export class Scene {
     if (!gl) throw new Error('WebGL2 unavailable');
     this.gl = gl;
     this.images = await Promise.all([
-      'assets/sanctuary.webp', 'assets/background.webp', 'assets/masks.png',
-      'assets/detail.png', 'assets/light.png', 'assets/mattes.png',
+      'assets/sanctuary.webp', 'assets/background.webp', 'assets/masks.webp',
+      'assets/detail.webp', 'assets/light.webp', 'assets/mattes.webp',
     ].map(loadImage));
     // pixel-exact hit testing from the same cut-outs the shader draws
     this.hit = { matte: pixels(this.images[5]), light: pixels(this.images[4]) };

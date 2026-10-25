@@ -1,7 +1,7 @@
 import { Scene, ISLANDS, IMG_W, IMG_H } from './scene.js';
 import { Life } from './life.js';
 import { renderRoom, showProject, RoomFX } from './rooms.js';
-import { Interior, INTERIORS } from './interior.js';
+import { Interior, INTERIORS, prefetchRoom } from './interior.js';
 import { Ambience } from './ambience.js';
 import { ROOMS } from './content.js';
 
@@ -15,7 +15,15 @@ const roomEl = $('#room');
 const fx = new RoomFX(roomEl.querySelector('.room-fx'));
 let interior = null; // the painted inside of each palace, once WebGL is up
 const ambience = new Ambience();
-if (location.search.includes('debug')) window.sanctuary = { scene, life };
+// start fetching the rooms right away: the one in the address first, then the rest
+{
+  const first = location.hash.replace(/^#\/?/, '').split('/')[0];
+  const order = ['projects', 'research', 'creative', 'contact'];
+  for (const r of order.includes(first) ? [first, ...order] : order) prefetchRoom(r).catch(() => {});
+}
+const DEBUG = location.search.includes('debug');
+const trace = (m) => { if (DEBUG) (window.__trace ??= []).push(`${clock.toFixed(2)} ${m}`); };
+if (DEBUG) window.sanctuary = { scene, life, state: () => ({ mode, current, camBlend, trace: window.__trace }) };
 const frameEl = $('#frame');
 
 // phones and narrow windows get a scrolling page with the scene in a frame;
@@ -319,8 +327,11 @@ async function enter(room, sub) {
   const ready = interior ? interior.use(room) : Promise.resolve();
   roomEl.classList.remove('arrived');
   body.dataset.room = room;
+  trace('enter: start');
   await new Promise(requestAnimationFrame);
+  trace('enter: frame');
   if (compact) await expandFrame(room);
+  trace('enter: expanded');
 
   const [dx, dy] = DOORS[room].at;
   const from = { ...scene.cam };
@@ -339,12 +350,26 @@ async function enter(room, sub) {
     scene.clampCam(flight);
     Object.assign(scene.cam, flight);
   }, (t) => t);
-  await ready;
+  trace('enter: glided');
+  // never stand waiting at the door: if the room is still on its way, step in
+  // on its painting and let the motion begin the moment it arrives
+  const live = await Promise.race([ready.then(() => true, () => false), new Promise((r) => setTimeout(() => r(false), 2500))]);
+  trace(`enter: ${live ? 'ready' : 'stepping in on the still'}`);
+  if (!live) {
+    roomEl.style.setProperty('--room-still', `url("${new URL(`assets/rooms/${INTERIORS[room].file}.webp`, document.baseURI).href}")`);
+    roomEl.classList.add('still-entry');
+    ready.then(() => {
+      if (current !== room) return;
+      roomEl.classList.remove('still-entry');
+      showStill(room);
+      if (mode === 'room') scene.view = 'room';
+    }, () => {});
+  }
 
   // 2. through the entrance: we keep moving in as the room takes over the view
   roomEl.hidden = false;
   roomEl.classList.add('shown');
-  if (interior) scene.view = 'blend';
+  if (interior && live) scene.view = 'blend';
   const zB = zA * 1.25;
   await tween(1.9, (k) => {
     flight.z = zA * Math.pow(zB / zA, ease.out(k));
@@ -353,9 +378,10 @@ async function enter(room, sub) {
     openAt(room, k);
   }, (t) => t);
 
-  if (interior) scene.view = 'room';
+  if (interior && live) scene.view = 'room';
   scene.veil = 0;
   roomEl.classList.add('arrived');
+  trace('enter: arrived');
   mode = 'room';
   setHover(null);
   roomEl.querySelector('.back').focus({ preventScroll: true });
