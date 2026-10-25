@@ -10,7 +10,7 @@ four places to step inside.
 | Upper pavilion | The Pavilion | Creative |
 | Gazebo with the postbox | The Post Garden | Contact, résumé, GitHub, LinkedIn |
 
-Live at https://kunjalmahajan02.github.io/sanctuary/
+**Live:** https://kunjalmahajan02.github.io/sanctuary/
 
 All wording lives in `js/content.js`. The Pavilion images and the résumé are
 served from the main site, kunjalmahajan02.github.io.
