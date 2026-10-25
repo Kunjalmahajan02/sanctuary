@@ -4,6 +4,7 @@ import { renderRoom, showProject, RoomFX } from './rooms.js';
 import { Interior, INTERIORS, prefetchRoom } from './interior.js';
 import { Ambience } from './ambience.js';
 import { ROOMS } from './content.js';
+import { Mascot } from './mascot.js';
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -15,6 +16,9 @@ const roomEl = $('#room');
 const fx = new RoomFX(roomEl.querySelector('.room-fx'));
 let interior = null; // the painted inside of each palace, once WebGL is up
 const ambience = new Ambience();
+// mini Kunjal, the guide; she arrives once the opening shot has settled
+const mascot = new Mascot({ onShowProjects: () => go('projects') });
+mascot.setScene(false);
 // start fetching the rooms right away: the one in the address first, then the rest
 {
   const first = location.hash.replace(/^#\/?/, '').split('/')[0];
@@ -315,6 +319,7 @@ async function collapseFrame() {
 }
 
 async function enter(room, sub) {
+  mascot.setScene(false);
   mode = 'entering';
   current = room;
   setHover(room);
@@ -459,6 +464,7 @@ async function leave() {
   body.classList.remove('travelling');
   camBlend = 0;
   mode = 'sky';
+  mascot.setScene(true);
   const label = labels[room];
   if (label && document.activeElement === document.body) label.focus({ preventScroll: true });
   if (parse().room) route();
@@ -563,6 +569,10 @@ async function intro() {
   camBlend = 0;
   mode = 'sky';
   body.classList.add('settled');
+  if (!parse().room) {
+    mascot.setScene(true);
+    setTimeout(() => { if (mode === 'sky') mascot.greet(); }, reduced ? 200 : 1400);
+  }
   startInteriors();
   // a lost graphics context shows the still paintings until it comes back
   scene.onLost = () => {
