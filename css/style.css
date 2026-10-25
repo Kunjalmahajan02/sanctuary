@@ -41,7 +41,11 @@ a { color: inherit; }
 
 /* ---------- the sky ---------- */
 #stage { position: fixed; inset: 0; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+/* the scene's own box: the whole window on desktop, a framed panel on phones */
+.frame-slot, .scene-frame { position: absolute; inset: 0; }
+.scene-frame { overflow: hidden; }
 #sky, #life { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.compass small, .page-foot { display: none; }
 #still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
 .no-gl #still { display: block; }
 .no-gl #sky { visibility: hidden; } /* never show the browser's crashed-canvas icon */
@@ -68,13 +72,6 @@ a { color: inherit; }
 .titled .hero .hi, .titled .hero .role, .titled .hero .tag { opacity: .96; }
 .titled .hero h1 span { opacity: 1; transform: none; letter-spacing: 0; }
 .travelling .hero { opacity: 0; transform: translateY(-10px); }
-.mark {
-  display: none; position: absolute; z-index: 3; left: 16px; top: 18px;
-  font: italic 500 21px var(--serif); color: #fffdf8; text-shadow: 0 1px 12px rgba(70, 34, 22, .55);
-  opacity: 0; pointer-events: none;
-}
-.settled .mark { animation: labelIn 1.6s var(--ease) 4.6s forwards; }
-.travelling .mark { visibility: hidden; }
 
 /* island name cards */
 #labels { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
@@ -413,40 +410,102 @@ th { font: 500 10px var(--sans); letter-spacing: .2em; text-transform: uppercase
 
 .noscript { position: fixed; inset: auto 0 0; padding: 16px; text-align: center; background: var(--ivory); }
 
-/* ---------- small screens ---------- */
-@media (max-width: 760px), (max-aspect-ratio: 5/4) {
-  .hint .desk { display: none; }
-  .hint .touch { display: inline; }
-  .compass button { justify-items: center; }
-  .compass { left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; padding: 60px 16px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(to top, rgba(74, 40, 40, .32), rgba(74, 40, 40, 0)); transform: translateY(14px); }
-  .compass em { font-size: 16px; }
-  .room-bar { padding-right: 16px; padding-top: 64px; }
-  /* phones: the room shows above, its page rises from below */
-  .folio.left, .folio.right, .log-folio, .letter-folio { left: 10px; right: 10px; width: auto; top: 38vh; bottom: 10px; }
-  .folio.right { top: 110px; }
-  .stage-title { top: 118px; }
-  .stage-title.left { width: auto; right: 16px; }
-  .stage-title.left::before { inset: -14% -8%; background: radial-gradient(closest-side, rgba(255, 249, 238, .82), rgba(255, 249, 238, 0)); }
-  .stage-title h1 { font-size: clamp(36px, 10vw, 56px); }
-  .room[data-room="creative"] .also { display: none; }
-  .gallery { left: 16px; right: 16px; }
-  .room[data-room="projects"]:has(.folio.open) .plaques { right: 0; opacity: 0; pointer-events: none; }
-  .label .name { font-size: 16px; }
-  .hint { bottom: calc(132px + env(safe-area-inset-bottom)); }
-  /* on tall screens the title is an opening card that clears the view for the islands */
-  .hero { right: 16px; top: clamp(60px, 9vh, 90px); bottom: auto; }
-  .hint { top: auto; }
-  .hero h1 { font-size: clamp(40px, 11vw, 76px); }
-  .settled .hero { animation: titleOut 1.8s var(--ease) 3.2s forwards; }
-  .settled .label { opacity: 0; animation: labelIn 1.4s var(--ease) 4.4s forwards; }
-  .settled .label.hot { animation: none; opacity: 1; }
-  .mark { display: block; }
+/* ---------- phones: a page with the scene in a frame ---------- */
+html:has(body.compact) { overflow-y: auto; height: auto; }
+body.compact { height: auto; min-height: 100%; overflow: visible; background: #fff9f0; }
+body.compact.travelling, body.compact[data-room] { overflow: hidden; }
+html:has(body.compact.travelling), html:has(body.compact[data-room]) { overflow: hidden; }
+
+.compact #stage {
+  position: relative; inset: auto; overflow: visible; touch-action: auto; user-select: auto; -webkit-user-select: auto;
+  padding: 0 16px; min-height: 100vh;
+  background: linear-gradient(180deg, #fff9f0 0%, #fbeee2 30%, #f6dfd2 58%, #ead8e3 100%);
 }
-@keyframes titleOut { to { opacity: 0; transform: translateY(-12px); visibility: hidden; } }
-@keyframes labelIn { to { opacity: .85; } }
-@media (max-width: 480px) {
+.compact .hero {
+  position: static; max-width: none; padding: calc(70px + env(safe-area-inset-top)) 4px 20px;
+  color: var(--ink); text-shadow: none; pointer-events: auto;
+}
+.compact .hero::before { display: none; }
+.compact .hero .hi { color: var(--ink-2); }
+.compact .hero h1 { font-size: clamp(44px, 13.5vw, 66px); line-height: .95; }
+.compact .hero .role { color: var(--gold); font-weight: 500; letter-spacing: .16em; margin-top: 14px; }
+.compact .hero .tag { color: var(--ink-2); }
+.compact.travelling .hero { opacity: 1; transform: none; }
+
+.compact .frame-slot {
+  position: relative; inset: auto; aspect-ratio: 16 / 10.5; border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 26px 50px -26px rgba(90, 50, 60, .55);
+}
+.compact .scene-frame { border-radius: 18px; transform: translateZ(0); }
+.compact.immersive .scene-frame { position: fixed; inset: 0; z-index: 15; border-radius: 0; transform: none; }
+
+.compact .label { padding: 3px 6px 0; }
+.compact .label .kind { font-size: 7.5px; letter-spacing: .26em; }
+.compact .label .name { font-size: 13.5px; }
+.compact .label i { height: 14px; margin-top: 3px; }
+.compact .label[data-mode="side"] { padding: 3px 6px 3px 0; column-gap: 6px; }
+.compact .label[data-mode="side"] i { width: 14px; height: 1px; margin: 0; }
+.compact .label[data-mode="below"] { padding: 0 6px 3px; }
+.compact .label[data-mode="below"] i { margin: 0 0 3px; }
+
+.compact .hint { top: auto; bottom: 10px; font-size: 13px; }
+.hint .touch { display: none; }
+.compact .hint .desk { display: none; }
+.compact .hint .touch { display: inline; }
+
+.compact .compass {
+  position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 22px 0 6px; padding: 0;
+}
+.compact .compass button {
+  justify-items: start; text-align: left; gap: 4px; padding: 16px 14px 15px;
+  background: rgba(255, 252, 246, .82); border: 1px solid rgba(169, 130, 63, .32); border-radius: 14px;
+  color: var(--ink); text-shadow: none;
+  box-shadow: 0 14px 28px -22px rgba(90, 50, 40, .5);
+  transition: transform .5s var(--ease), border-color .4s, background .4s;
+}
+.compact .compass button:active, .compact .compass button.hot { transform: translateY(-2px); border-color: var(--gold); background: #fffdf8; }
+.compact .compass button::after { display: none; }
+.compact .compass em { font-size: 19px; }
+.compact .compass span { color: var(--gold); font-weight: 500; opacity: 1; letter-spacing: .26em; padding-left: 0; }
+.compact .compass small { display: block; font: italic 400 14px/1.3 var(--serif); color: var(--ink-2); margin-top: 2px; }
+.compact .page-foot { display: block; padding: 22px 0 calc(30px + env(safe-area-inset-bottom)); text-align: center; font: italic 400 15px var(--serif); color: var(--ink-2); }
+
+body.compact:not(.immersive):not([data-room]) #sound { color: var(--ink); background: rgba(255, 252, 246, .75); border-color: rgba(90, 60, 30, .22); text-shadow: none; }
+body.compact #sound { top: calc(14px + env(safe-area-inset-top)); right: 14px; }
+
+/* phones, inside a room: a page that scrolls over the living painting */
+.compact .room-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.compact .room-bar {
+  position: sticky; top: 0; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; padding-right: 130px;
+  background: linear-gradient(rgba(255, 249, 238, .9), rgba(255, 249, 238, 0));
+}
+.compact .room-body { position: relative; inset: auto; display: flex; flex-direction: column; gap: 14px; padding: 40vh 12px calc(28px + env(safe-area-inset-bottom)); }
+.compact .stage-title, .compact .stage-title.left {
+  position: static; transform: none; width: auto; text-align: left; pointer-events: auto;
+  padding: 20px 18px; border-radius: 14px; text-shadow: none;
+  background: rgba(255, 250, 241, .93); border: 1px solid rgba(169, 130, 63, .3);
+  box-shadow: 0 20px 40px -26px rgba(40, 24, 10, .55);
+}
+.compact .stage-title::before { display: none; }
+.compact .stage-title.rise, .compact .stage-title.left.rise { animation-name: rise; transform: translateY(18px); }
+.compact .stage-title h1 { font-size: clamp(36px, 11vw, 52px); }
+.compact .plaques { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0; overflow: visible; }
+.compact .plaque { width: auto; padding: 34px 14px 14px; }
+.compact .plaque:hover, .compact .plaque.on { transform: none; }
+.compact .gallery { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: none; overflow: visible; padding: 0; }
+.compact .gallery .frame { width: auto; align-self: start; }
+.compact .gallery .frame ul { max-height: none; opacity: 1; margin-top: 6px; }
+.compact .folio.left, .compact .log-folio, .compact .letter-folio { position: static; width: auto; top: auto; bottom: auto; }
+.compact .folio.left .folio-scroll { overflow: visible; padding: 24px 18px 26px; }
+.compact .folio.right { position: fixed; left: 0; right: 0; top: calc(60px + env(safe-area-inset-top)); bottom: 0; width: auto; border-radius: 16px 16px 0 0; z-index: 6; transform: translateY(40px); }
+.compact .folio.right.open { transform: none; }
+.compact .room[data-room="projects"]:has(.folio.open) .plaques { right: auto; }
+.compact .room[data-room="projects"]:has(.folio.open) .stage-title { left: auto; width: auto; }
+.compact .room[data-room="creative"] .also { display: flex; }
+.compact .ways { grid-template-columns: 1fr; }
+@media (max-width: 560px) {
   .room-nav { display: none; }
-  .ways { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -16,6 +16,20 @@ const fx = new RoomFX(roomEl.querySelector('.room-fx'));
 let interior = null; // the painted inside of each palace, once WebGL is up
 const ambience = new Ambience();
 if (location.search.includes('debug')) window.sanctuary = { scene, life };
+const frameEl = $('#frame');
+
+// phones and narrow windows get a scrolling page with the scene in a frame;
+// stepping into a place opens that frame out to the whole screen
+const compactQuery = matchMedia('(max-width: 760px), (max-aspect-ratio: 5/4)');
+let compact = compactQuery.matches;
+body.classList.toggle('compact', compact);
+compactQuery.addEventListener('change', (e) => {
+  if (mode !== 'sky') return; // switch layouts only between journeys
+  compact = e.matches;
+  body.classList.toggle('compact', compact);
+});
+if (matchMedia('(pointer: coarse)').matches) scene.frameCap = 33;
+scene.onResize = () => { life.resize(); labelHeights = null; };
 
 // where each island's name card floats, in painting pixels
 // (above the island; when the frame's top edge is too close, the alternative
@@ -62,7 +76,7 @@ let clock = 0;
 let panX = 0.5; // user pan on narrow screens
 const rest = { x: 0.5, y: 0.5, z: 1.04 };
 function restCam(t) {
-  const narrow = innerWidth / innerHeight < 1.25;
+  const narrow = scene.vw / scene.vh < 1.25;
   // a slow, barely-there crane drift keeps the frame breathing
   const drift = reduced ? 0 : 1;
   return scene.clampCam({
@@ -112,7 +126,7 @@ function placeLabels() {
     if (el.dataset.mode !== mode) el.dataset.mode = mode;
     const shift = mode === 'below' ? 'translate(-50%, 0)' : mode === 'side' ? 'translate(0, -50%)' : 'translate(-50%, -100%)';
     el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) ${shift}`;
-    const off = x < -40 || x > innerWidth + 40;
+    const off = x < -40 || x > scene.vw + 40;
     if (el.classList.contains('offscreen') !== off) el.classList.toggle('offscreen', off);
   }
 }
@@ -122,27 +136,32 @@ function setHover(key) {
   scene.hoverTarget = key;
   for (const [k, el] of Object.entries(labels)) el.classList.toggle('hot', k === key);
   for (const el of document.querySelectorAll('.compass button')) el.classList.toggle('hot', el.dataset.room === key);
-  $('#stage').style.cursor = key ? 'pointer' : '';
+  frameEl.style.cursor = key ? 'pointer' : '';
 }
 
 // ---------- pointer ----------
+// positions inside the scene's own frame
+function local(e) {
+  const r = frameEl.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
 let drag = null;
-const stage = $('#stage');
-stage.addEventListener('pointermove', (e) => {
-  scene.par.tx = (e.clientX / innerWidth - 0.5) * 2;
-  scene.par.ty = (e.clientY / innerHeight - 0.5) * 2;
+frameEl.addEventListener('pointermove', (e) => {
+  const [x, y] = local(e);
+  scene.par.tx = (x / scene.vw - 0.5) * 2;
+  scene.par.ty = (y / scene.vh - 0.5) * 2;
   if (drag) {
     const dx = e.clientX - drag.x;
     if (Math.abs(dx) > 6) drag.moved = true;
     const vis = scene.visible()[0] / scene.cam.z;
-    panX = drag.pan - (dx / innerWidth) * vis;
+    panX = drag.pan - (dx / scene.vw) * vis;
     const c = scene.clampCam({ x: panX, y: 0.5, z: rest.z });
     panX = c.x;
     return;
   }
-  if (mode === 'sky' && e.pointerType === 'mouse') setHover(scene.islandAt(e.clientX, e.clientY));
+  if (mode === 'sky' && e.pointerType === 'mouse') setHover(scene.islandAt(x, y));
 });
-stage.addEventListener('pointerdown', (e) => {
+frameEl.addEventListener('pointerdown', (e) => {
   if (mode !== 'sky') return;
   drag = { x: e.clientX, pan: panX, moved: false };
 });
@@ -150,11 +169,11 @@ addEventListener('pointerup', (e) => {
   const d = drag;
   drag = null;
   if (!d || d.moved || mode !== 'sky') return;
-  if (e.target.closest('button, a')) return;
-  const key = scene.islandAt(e.clientX, e.clientY);
+  if (e.target.closest('button, a') || !frameEl.contains(e.target)) return;
+  const key = scene.islandAt(...local(e));
   if (key) go(key);
 });
-stage.addEventListener('pointerleave', () => { scene.par.tx = 0; scene.par.ty = 0; if (mode === 'sky') setHover(null); });
+frameEl.addEventListener('pointerleave', () => { scene.par.tx = 0; scene.par.ty = 0; if (mode === 'sky') setHover(null); });
 
 // ---------- routing ----------
 function parse() {
@@ -196,13 +215,13 @@ function smooth(a, b, x) {
 }
 
 // screen pixels per painting pixel at the current camera
-const pxScale = () => (innerWidth * scene.cam.z) / (IMG_W * scene.visible()[0]);
+const pxScale = () => (scene.vw * scene.cam.z) / (IMG_W * scene.visible()[0]);
 
 // how close the camera comes to an entrance: near enough that the doorway
 // is the subject, never so near that the painting turns soft
 function approachZoom(room, from) {
   const h = DOORS[room].size[1];
-  const framed = (0.3 * innerHeight * IMG_W * scene.visible()[0]) / (h * innerWidth);
+  const framed = (0.3 * scene.vh * IMG_W * scene.visible()[0]) / (h * scene.vw);
   return Math.min(3.2, Math.max(from.z * 1.6, framed));
 }
 
@@ -229,6 +248,64 @@ function openAt(room, u) {
   Object.assign(insideCam, { x: rest.x, y: rest.y, z: 1.0 + (rest.z + 0.02 - 1.0) * ease.out(u) });
 }
 
+// ---- phones: the framed scene opens out to the whole screen ----
+let slot = null; // where the frame sits in the page, kept for the way back
+const fullWidthAt1 = () => { const A = innerWidth / innerHeight, I = IMG_W / IMG_H; return A > I ? 1 : A / I; };
+const clipTo = (r, k) => `inset(${(r.top * (1 - k)).toFixed(1)}px ${((innerWidth - r.right) * (1 - k)).toFixed(1)}px ${((innerHeight - r.bottom) * (1 - k)).toFixed(1)}px ${(r.left * (1 - k)).toFixed(1)}px round ${(18 * (1 - k)).toFixed(1)}px)`;
+
+async function expandFrame(room) {
+  // bring the frame to the middle of the screen first
+  let r = frameEl.getBoundingClientRect();
+  if (r.top < 0 || r.bottom > innerHeight) {
+    scrollTo({ top: scrollY + r.top - (innerHeight - r.height) / 2, behavior: reduced ? 'auto' : 'smooth' });
+    await wait(0.5);
+    r = frameEl.getBoundingClientRect();
+  }
+  // 1. lean in towards the place until the frame shows what the full screen will
+  const [dx, dy] = DOORS[room].at;
+  const vxFrame = scene.visible()[0], vxFull = fullWidthAt1();
+  const zMatch = Math.max(1.04, vxFrame / vxFull);
+  const from = { ...scene.cam };
+  Object.assign(flight, from);
+  camBlend = 1;
+  await tween(0.9, (k) => {
+    flight.x = from.x + (dx / IMG_W - from.x) * k;
+    flight.y = from.y + (dy / IMG_H - from.y) * k;
+    flight.z = from.z * Math.pow(zMatch / from.z, k);
+    scene.clampCam(flight);
+  }, ease.inOut);
+  // 2. the frame opens out to the whole screen with the same view across it
+  slot = r;
+  frameEl.style.clipPath = clipTo(r, 0);
+  body.classList.add('immersive');
+  scene.resize();
+  flight.z = Math.max(1, (flight.z * vxFull) / vxFrame);
+  scene.clampCam(flight);
+  Object.assign(scene.cam, flight);
+  await tween(0.7, (k) => { frameEl.style.clipPath = clipTo(r, k); }, ease.inOut);
+  frameEl.style.clipPath = '';
+}
+
+async function collapseFrame() {
+  const r = slot || frameEl.getBoundingClientRect();
+  // pull back to the widest full-screen view of this spot, then fold the
+  // screen back into the frame on the page and settle there
+  const start = { ...flight };
+  await tween(0.8, (k) => {
+    flight.z = start.z * Math.pow(1 / start.z, k);
+    scene.clampCam(flight);
+  }, ease.inOut);
+  await tween(0.7, (k) => { frameEl.style.clipPath = clipTo(r, 1 - k); }, ease.inOut);
+  const vxFull = fullWidthAt1();
+  body.classList.remove('immersive');
+  frameEl.style.clipPath = '';
+  scene.resize();
+  flight.z = Math.max(1.04, (flight.z * scene.visible()[0]) / vxFull);
+  scene.clampCam(flight);
+  Object.assign(scene.cam, flight);
+  slot = null;
+}
+
 async function enter(room, sub) {
   mode = 'entering';
   current = room;
@@ -243,6 +320,7 @@ async function enter(room, sub) {
   roomEl.classList.remove('arrived');
   body.dataset.room = room;
   await new Promise(requestAnimationFrame);
+  if (compact) await expandFrame(room);
 
   const [dx, dy] = DOORS[room].at;
   const from = { ...scene.cam };
@@ -252,7 +330,8 @@ async function enter(room, sub) {
   tween(1.4, (k) => { scene.par.k = 1 - k; });
 
   // 1. glide across the sky and close in on the entrance, as one move
-  await tween(3.0, (k) => {
+  // (on phones the frame has already leaned in, so the rest is shorter)
+  await tween(compact ? 2.2 : 3.0, (k) => {
     const g = ease.inOut(Math.min(1, k / 0.8));
     flight.x = from.x + (dx / IMG_W - from.x) * g;
     flight.y = from.y + (dy / IMG_H - from.y) * g;
@@ -280,7 +359,9 @@ async function enter(room, sub) {
   mode = 'room';
   setHover(null);
   roomEl.querySelector('.back').focus({ preventScroll: true });
-  if (parse().room !== room) route();
+  const now = parse();
+  if (now.room !== room) route();
+  else if (now.sub !== sub) showProject(roomEl, now.sub); // a project picked on the way in
 }
 
 // moving between rooms from inside: through a moment of warm light
@@ -336,6 +417,10 @@ async function leave() {
   document.title = 'Kunjal Mahajan — A Botanical Sanctuary';
 
   // 2. drift back out over the sky; the title returns as we arrive
+  if (compact) {
+    body.classList.remove('travelling');
+    await collapseFrame();
+  }
   const start = { ...flight };
   tween(1.8, (k) => { scene.par.k = k; });
   await tween(2.2, (k) => {
@@ -369,6 +454,7 @@ scene.onFrame((dt) => {
     if (tw.t >= 1) { tweens.delete(tw); tw.resolve(); }
   }
   const r = restCam(clock);
+  scene.resting = mode === 'sky' && !camBlend;
   if (camBlend) Object.assign(scene.cam, flight);
   else Object.assign(scene.cam, r);
   if (scene.view !== 'room') {
@@ -467,5 +553,5 @@ async function intro() {
   if (parse().room) route();
 }
 
-if (innerWidth / innerHeight < 1.25) panX = 0.44;
+if (!compact && innerWidth / innerHeight < 1.25) panX = 0.44;
 intro();

@@ -43,14 +43,13 @@ export class Life {
       ax: x, ay: y, x, y, seed: rand(0, 100), hue: i ? '#fff6dc' : '#fbe3ef', flap: rand(0, TAU),
     }));
     this.resize();
-    addEventListener('resize', () => this.resize());
   }
 
   resize() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
     this.dpr = dpr;
-    this.c.width = Math.round(innerWidth * dpr);
-    this.c.height = Math.round(innerHeight * dpr);
+    this.c.width = Math.round(this.scene.vw * dpr);
+    this.c.height = Math.round(this.scene.vh * dpr);
   }
 
   mote(initial) {
@@ -133,7 +132,7 @@ export class Life {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.c.width, this.c.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const z = scene.cam.z * (innerWidth / (1672 * scene.visible()[0]));
+    const z = scene.cam.z * (scene.vw / (1672 * scene.visible()[0]));
     const fade = 1 - scene.veil;
     if (fade <= 0.01) return;
     ctx.globalAlpha = fade;

@@ -22,10 +22,6 @@
   </div>
 
   <main id="stage" aria-label="A sanctuary of floating islands. Choose an island to step inside.">
-    <img id="still" src="assets/sanctuary.webp" alt="" aria-hidden="true">
-    <canvas id="sky" aria-hidden="true"></canvas>
-    <canvas id="life" aria-hidden="true"></canvas>
-
     <header class="hero">
       <p class="hi">hi, i’m</p>
       <h1><span>Kunjal</span> <span>Mahajan</span></h1>
@@ -33,17 +29,24 @@
       <p class="tag">part engineer, part artist, entirely too curious.</p>
     </header>
 
-    <p class="mark" aria-hidden="true">Kunjal Mahajan</p>
-    <div id="labels"></div>
-
-    <p class="hint"><span class="desk">Choose an island to step inside</span><span class="touch">Drag to look around · tap an island to step inside</span></p>
+    <div class="frame-slot">
+    <div id="frame" class="scene-frame">
+      <img id="still" src="assets/sanctuary.webp" alt="" aria-hidden="true">
+      <canvas id="sky" aria-hidden="true"></canvas>
+      <canvas id="life" aria-hidden="true"></canvas>
+      <div id="labels"></div>
+      <p class="hint"><span class="desk">Choose an island to step inside</span><span class="touch">Tap an island to step inside</span></p>
+    </div>
+    </div>
 
     <nav id="compass" class="compass" aria-label="Islands">
-      <button type="button" data-room="projects"><em>The Glasshouse</em><span>Projects</span></button>
-      <button type="button" data-room="research"><em>The Observatory</em><span>Research</span></button>
-      <button type="button" data-room="creative"><em>The Pavilion</em><span>Creative</span></button>
-      <button type="button" data-room="contact"><em>The Post Garden</em><span>Contact</span></button>
+      <button type="button" data-room="projects"><em>The Glasshouse</em><span>Projects</span><small>things i’ve grown, built and tended</small></button>
+      <button type="button" data-room="research"><em>The Observatory</em><span>Research</span><small>what i’m reading & looking up at</small></button>
+      <button type="button" data-room="creative"><em>The Pavilion</em><span>Creative</span><small>dance, art & the stage</small></button>
+      <button type="button" data-room="contact"><em>The Post Garden</em><span>Contact</span><small>letters, résumé & ways to say hi</small></button>
     </nav>
+
+    <footer class="page-foot">Kunjal Mahajan · Thane, Mumbai</footer>
   </main>
 
   <button id="sound" type="button" aria-pressed="false" title="Ambient sound">

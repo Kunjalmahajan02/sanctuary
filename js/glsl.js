@@ -18,7 +18,8 @@ float fbm2(vec2 p){ return (noise(p)*0.67 + noise(p*2.03 + 17.1)*0.33); }
 // Catmull-Rom in 9 bilinear taps, plus a gentle detail lift, so the painting
 // stays crisp when it is drawn larger than its native size
 vec3 sharpTex(sampler2D tex, vec2 uv){
-  if (uUpscale < 1.02) return texture(tex, uv).rgb;
+  // the 9-tap filter only earns its cost when the painting is clearly enlarged
+  if (uUpscale < 1.3) return texture(tex, uv).rgb;
   vec2 sp = uv*uSize;
   vec2 t1 = floor(sp - 0.5) + 0.5;
   vec2 f = sp - t1;

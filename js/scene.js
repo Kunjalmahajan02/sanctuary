@@ -250,6 +250,12 @@ export class Scene {
     this.motion = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.25 : 1;
     this.listeners = [];
     this.offsets = new Float32Array(8);
+    // the box the scene is drawn into, in CSS pixels (full window, or a frame on phones)
+    this.vw = innerWidth;
+    this.vh = innerHeight;
+    this.quality = 1;      // stepped down once if a device cannot keep up
+    this.frameCap = 0;     // ms between frames when resting (0 = every frame)
+    this.lastDrawn = 0;
   }
 
   async init() {
@@ -268,15 +274,17 @@ export class Scene {
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       this.lost = true;
+      document.body.classList.add('no-gl'); // the still painting covers at once, even mid-intro
       this.onLost?.();
     });
     this.canvas.addEventListener('webglcontextrestored', () => {
       this.lost = false;
       this.setup();
+      document.body.classList.remove('no-gl');
       this.onRestored?.();
     });
     this.setup();
-    addEventListener('resize', () => this.resize());
+    new ResizeObserver(() => this.resize()).observe(this.canvas);
     this.startLoop();
   }
 
@@ -348,9 +356,14 @@ export class Scene {
   }
 
   resize() {
-    // one canvas pixel per screen pixel, so the browser never stretches it
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+    this.vw = this.canvas.clientWidth || innerWidth;
+    this.vh = this.canvas.clientHeight || innerHeight;
+    // a pixel budget keeps every frame affordable: sharp on ordinary screens,
+    // and on very dense ones a little under native, which the eye can't tell
+    const phone = matchMedia('(pointer: coarse)').matches;
+    const budget = phone ? 1.3e6 : 2.6e6;
+    const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(budget / (this.vw * this.vh))) * this.quality;
+    const w = Math.round(this.vw * dpr), h = Math.round(this.vh * dpr);
     const changed = this.canvas.width !== w || this.canvas.height !== h;
     if (changed) {
       this.canvas.width = w;
@@ -359,13 +372,14 @@ export class Scene {
     this.gl?.viewport(0, 0, w, h);
     this.interior?.resize(w, h);
     this.clampCam();
+    this.onResize?.();
     // resizing wipes a WebGL canvas; paint it again at once so it never shows black
     if (changed && this.u && this.lastT !== undefined) this.draw(this.lastT);
   }
 
   // fraction of the painting visible at zoom 1 (cover fit)
   visible() {
-    const A = innerWidth / innerHeight, I = IMG_W / IMG_H;
+    const A = this.vw / this.vh, I = IMG_W / IMG_H;
     return A > I ? [1, I / A] : [A / I, 1];
   }
 
@@ -380,13 +394,13 @@ export class Scene {
   // painting pixel -> CSS pixel on screen
   toScreen(ix, iy, cam = this.cam) {
     const [vx, vy] = this.visible();
-    return [((ix / IMG_W - cam.x) * cam.z / vx + 0.5) * innerWidth, ((iy / IMG_H - cam.y) * cam.z / vy + 0.5) * innerHeight];
+    return [((ix / IMG_W - cam.x) * cam.z / vx + 0.5) * this.vw, ((iy / IMG_H - cam.y) * cam.z / vy + 0.5) * this.vh];
   }
 
   // CSS pixel -> painting pixel
   toImage(sx, sy, cam = this.cam) {
     const [vx, vy] = this.visible();
-    return [(cam.x + (sx / innerWidth - 0.5) * vx / cam.z) * IMG_W, (cam.y + (sy / innerHeight - 0.5) * vy / cam.z) * IMG_H];
+    return [(cam.x + (sx / this.vw - 0.5) * vx / cam.z) * IMG_W, (cam.y + (sy / this.vh - 0.5) * vy / cam.z) * IMG_H];
   }
 
   // only real land counts: sky between the trees is not a click target
@@ -430,6 +444,8 @@ export class Scene {
 
   frame(now) {
     requestAnimationFrame((t) => this.frame(t));
+    // resting on a phone, every other frame is plenty for clouds and leaves
+    if (this.frameCap && this.resting && now - this.last < this.frameCap - 2) return;
     const dt = Math.max(0, Math.min((now - this.last) / 1000, 0.1));
     this.last = now;
     for (const fn of this.listeners) fn(dt, now);
@@ -446,6 +462,19 @@ export class Scene {
 
     if (this.view === 'blend') this.interior.draw(this.interior.target, now);
     this.draw((now - this.start) / 1000);
+    this.adapt(dt, now);
+  }
+
+  // If frames run long while resting, lower the resolution in one step and
+  // stay there: stepping back and forth is what makes a canvas flicker.
+  adapt(dt, now) {
+    if (this.quality < 1 || now - this.start < 4000 || !this.resting) { this.slow = []; return; }
+    (this.slow ??= []).push(dt);
+    if (this.slow.length < 120) return;
+    const median = [...this.slow].sort((a, b) => a - b)[60];
+    this.slow = [];
+    const budget = this.frameCap ? this.frameCap / 1000 : 1 / 60;
+    if (median > budget * 1.35) { this.quality = 0.8; this.resize(); }
   }
 
   draw(t) {
@@ -467,7 +496,7 @@ export class Scene {
     gl.uniform4f(u.hov, this.hover.research, this.hover.creative, this.hover.contact, this.hover.projects);
     gl.uniform1f(u.veil, this.veil);
     gl.uniform2f(u.veilC, this.veilC[0], this.veilC[1]);
-    const o = this.opening, k = this.canvas.width / innerWidth, H = this.canvas.height;
+    const o = this.opening, k = this.canvas.width / this.vw, H = this.canvas.height;
     gl.uniform1f(u.open, this.view === 'blend' ? Math.max(o.u, 1e-4) : 0);
     gl.uniform2f(u.openC, o.c[0] * k, H - o.c[1] * k);
     gl.uniform2f(u.openR, Math.max(1, o.r[0] * k), Math.max(1, o.r[1] * k));

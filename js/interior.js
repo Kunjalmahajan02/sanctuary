@@ -252,7 +252,7 @@ export class Interior {
   }
 
   visible() {
-    const A = innerWidth / innerHeight, I = W / H;
+    const A = this.size[0] / this.size[1], I = W / H;
     return A > I ? [1, I / A] : [A / I, 1];
   }
 
