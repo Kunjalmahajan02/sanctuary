@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kunjal Mahajan — A Botanical Sanctuary</title>
+  <meta name="description" content="Kunjal Mahajan — AI & Data Science Engineer working in computer vision, deep learning and GenAI. Step onto the floating islands to see projects, research, creative work and contact.">
+  <meta name="theme-color" content="#f3d9c4">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23f6dcc6'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-style='italic' font-size='36' text-anchor='middle' fill='%23a9823f'%3EK%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="assets/sanctuary.webp" as="image" type="image/webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#compass">Skip to the islands</a>
+
+  <div id="loader" aria-hidden="true">
+    <span class="mono">K</span>
+    <span class="line"></span>
+  </div>
+
+  <main id="stage" aria-label="A sanctuary of floating islands. Choose an island to step inside.">
+    <img id="still" src="assets/sanctuary.webp" alt="" aria-hidden="true">
+    <canvas id="sky" aria-hidden="true"></canvas>
+    <canvas id="life" aria-hidden="true"></canvas>
+
+    <header class="hero">
+      <p class="hi">hi, i’m</p>
+      <h1><span>Kunjal</span> <span>Mahajan</span></h1>
+      <p class="role">AI & Data Science Engineer · Computer Vision, Deep Learning & GenAI</p>
+      <p class="tag">part engineer, part artist, entirely too curious.</p>
+    </header>
+
+    <p class="mark" aria-hidden="true">Kunjal Mahajan</p>
+    <div id="labels"></div>
+
+    <p class="hint"><span class="desk">Choose an island to step inside</span><span class="touch">Drag to look around · tap an island to step inside</span></p>
+
+    <nav id="compass" class="compass" aria-label="Islands">
+      <button type="button" data-room="projects"><em>The Glasshouse</em><span>Projects</span></button>
+      <button type="button" data-room="research"><em>The Observatory</em><span>Research</span></button>
+      <button type="button" data-room="creative"><em>The Pavilion</em><span>Creative</span></button>
+      <button type="button" data-room="contact"><em>The Post Garden</em><span>Contact</span></button>
+    </nav>
+  </main>
+
+  <button id="sound" type="button" aria-pressed="false" title="Ambient sound">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 4V6L7 10H4z"/><path class="w" d="M15 9.5c1 .7 1.5 1.5 1.5 2.5s-.5 1.8-1.5 2.5M17.5 7c1.8 1.3 2.7 3 2.7 5s-.9 3.7-2.7 5"/></svg>
+    <span>Sound <span class="state">off</span></span>
+  </button>
+
+  <div id="room" class="room" role="dialog" aria-modal="true" aria-labelledby="room-title" hidden>
+    <canvas class="room-fx" aria-hidden="true"></canvas>
+    <div class="room-flash" aria-hidden="true"></div>
+    <div class="room-scroll">
+      <nav class="room-bar" aria-label="Sanctuary">
+        <a class="back" href="#/"><span aria-hidden="true">←</span> Return to the sky</a>
+        <div class="room-nav">
+          <a href="#/projects" data-room="projects">Glasshouse</a>
+          <a href="#/research" data-room="research">Observatory</a>
+          <a href="#/creative" data-room="creative">Pavilion</a>
+          <a href="#/contact" data-room="contact">Post Garden</a>
+        </div>
+      </nav>
+      <div class="room-body"></div>
+    </div>
+  </div>
+
+  <noscript><p class="noscript">This sanctuary needs JavaScript. Email <a href="mailto:kunjal02mahajan@gmail.com">kunjal02mahajan@gmail.com</a> · <a href="https://github.com/Kunjalmahajan02">GitHub</a></p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
